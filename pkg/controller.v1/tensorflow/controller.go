@@ -54,7 +54,8 @@ const (
 	tfReplicaIndexLabel = "replica-index"
 	labelGroupName      = "group-name"
 	// Deprecated label for backwards compatibility. Has to be removed
-	labelTFJobName = "tf-job-name"
+	labelTFJobName  = "tf-job-name"
+	annotationQueue = "kube-queue"
 )
 
 var (
@@ -256,6 +257,15 @@ func (tc *TFController) processNextWorkItem() bool {
 		}
 
 		return true
+	}
+
+	// Wait until queueing annotation is removed
+	if tfJob.Annotations != nil {
+		if _, exist := tfJob.Annotations[annotationQueue]; exist {
+			infoMsg := fmt.Sprintf("Annotation %s is found, operator will not process until removed", annotationQueue)
+			tflogger.LoggerForKey(key).Info(infoMsg)
+			return true
+		}
 	}
 
 	// Sync TFJob to match the actual state to this desired state.
